@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar";
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Home from './pages/Home';
+import Songs from './pages/Songs';
 
 
 
@@ -21,6 +22,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/songs" element={<Songs />} />
       </Routes>
     </Router>
   )
