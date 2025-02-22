@@ -18,11 +18,17 @@ const SongsTable = () => {
 
   // Fetch data from backend
   useEffect(() => {
-    fetch("http://localhost:8080/api/songs")
+    fetch(`${import.meta.env.VITE_API_URL}/songs?sortBy=${sorting[0]?.id || "id"}&order=${sorting[0]?.desc ? "desc" : "asc"}`, {
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true"  // ✅ Bypasses ngrok's security warning
+        }
+      })
       .then((response) => response.json())
-      .then((data) => setSongs(data))
+      .then((data) => setSongs(data)) // ✅ Data is now sorted from the backend
       .catch((error) => console.error("Error fetching songs:", error));
-  }, []);
+  }, [sorting]);
 
   // Define table columns (✅ Fixed Headers & Cells)
   const columns = useMemo(
@@ -108,15 +114,25 @@ const SongsTable = () => {
       <Table className="w-full border-collapse border border-gray-300">
         {/* ✅ Fixed Headers */}
         <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="bg-gray-100">
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="border p-2 font-bold text-left">
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
+            {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="bg-gray-100">
+                {headerGroup.headers.map((header) => (
+                    <TableHead
+                    key={header.id}
+                    onClick={() => {
+                        setSorting((prevSorting) => {
+                        const isDesc = prevSorting.length > 0 && prevSorting[0].id === header.column.id && !prevSorting[0].desc;
+                        return [{ id: header.column.id, desc: isDesc }];
+                        });
+                    }}
+                    className="border p-2 font-bold text-left cursor-pointer select-none"
+                    >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    {sorting[0]?.id === header.column.id ? (sorting[0]?.desc ? " 🔽" : " 🔼") : " ↕"}
+                    </TableHead>
+                ))}
+                </TableRow>
+            ))}
         </TableHeader>
 
         {/* Table Body */}
