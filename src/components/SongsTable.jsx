@@ -75,7 +75,7 @@ const SongsTable = () => {
   // Apply filter
   const filteredData = useMemo(() => {
     return songs.filter((song) =>
-      song.track.toLowerCase().includes(filterText.toLowerCase())
+      song.artist.toLowerCase().includes(filterText.toLowerCase())
     );
   }, [songs, filterText]);
 
@@ -99,12 +99,12 @@ const SongsTable = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Songs List</h2>
+      <h2 className="text-2xl font-bold mb-4">Top Songs 2024:</h2>
 
       {/* Filter input */}
       <Input
         type="text"
-        placeholder="Filter by track..."
+        placeholder="Filter by artist..."
         value={filterText}
         onChange={(e) => setFilterText(e.target.value)}
         className="mb-4"
