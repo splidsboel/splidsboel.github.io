@@ -1,0 +1,35 @@
+---
+import '../styles/global.css';
+import Nav from '../components/Nav.astro';
+import { SITE } from '../config';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title, description = SITE.description } = Astro.props;
+const pageTitle = title ? `${title} · ${SITE.title}` : SITE.title;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{pageTitle}</title>
+  </head>
+  <body class="min-h-screen bg-white text-zinc-700 antialiased">
+    <div class="mx-auto flex min-h-screen max-w-2xl flex-col px-6">
+      <Nav />
+      <main class="flex-1 py-12">
+        <slot />
+      </main>
+      <footer class="border-t border-zinc-200 py-6 text-sm text-zinc-400">
+        © {new Date().getFullYear()} {SITE.title}
+      </footer>
+    </div>
+  </body>
+</html>

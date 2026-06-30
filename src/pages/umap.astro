@@ -1,0 +1,588 @@
+---
+// Full-screen, standalone page — intentionally does NOT use the site Layout,
+// since the visualizer takes over the whole viewport.
+// Static snapshot of the SampleVec 3D explorer (https://github.com/splidsboel/samplevec).
+// Layout data lives in /public/umap-layout.json (path-free; filenames only).
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UMAP Sample Explorer · Jakob Splidsboel</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #000; color: #cdd6f4; font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace; overflow: hidden; }
+canvas { display: block; }
+
+#overlay {
+  position: fixed; inset: 0;
+  background: rgba(17,17,27,0.94);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 100; gap: 16px; padding: 24px;
+  transition: opacity 0.4s;
+}
+#overlay.hidden { opacity: 0; pointer-events: none; }
+
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #313244;
+  border-top-color: #89b4fa;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#intro { max-width: 440px; text-align: center; display: flex; flex-direction: column; gap: 14px; }
+#intro h1 { font-size: 20px; color: #cdd6f4; font-weight: 600; }
+#intro p { font-size: 13px; line-height: 1.7; color: #a6adc8; }
+#intro a { color: #89b4fa; text-decoration: none; }
+#intro a:hover { text-decoration: underline; }
+#overlay-msg { font-size: 14px; color: #cdd6f4; }
+#overlay-sub { font-size: 12px; color: #6c7086; text-align: center; max-width: 320px; }
+
+.ui-btn {
+  background: #313244; border: 1px solid #45475a;
+  color: #cdd6f4; padding: 9px 22px;
+  font-size: 13px; font-family: inherit;
+  border-radius: 6px; cursor: pointer;
+  transition: background 0.15s;
+}
+.ui-btn:hover:not(:disabled) { background: #45475a; }
+.ui-btn:disabled { opacity: 0.5; cursor: default; }
+
+#back {
+  position: fixed; top: 16px; left: 16px; z-index: 10;
+  font-size: 12px; color: #6c7086; text-decoration: none;
+  background: rgba(30,30,46,0.85); border: 1px solid #45475a;
+  padding: 6px 11px; border-radius: 6px;
+  transition: color 0.15s, border-color 0.15s;
+}
+#back:hover { color: #cdd6f4; border-color: #89b4fa; }
+
+#tooltip {
+  position: fixed;
+  background: rgba(30,30,46,0.95);
+  border: 1px solid #45475a;
+  padding: 5px 10px; font-size: 12px; color: #cdd6f4;
+  border-radius: 5px; pointer-events: none; z-index: 20;
+  display: none; max-width: 340px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+#hud {
+  position: fixed; bottom: 14px; left: 16px;
+  font-size: 11px; color: #45475a; z-index: 10;
+  line-height: 1.8; pointer-events: none;
+}
+
+#speed-indicator {
+  position: fixed; top: 16px; right: 16px;
+  font-size: 11px; color: #45475a; z-index: 10;
+  pointer-events: none;
+}
+
+#settings-toggle {
+  position: fixed; top: 16px; right: 16px;
+  background: #313244; border: 1px solid #45475a;
+  color: #cdd6f4; width: 32px; height: 32px;
+  border-radius: 6px; cursor: pointer; z-index: 11;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; user-select: none;
+  transition: background 0.15s;
+}
+#settings-toggle:hover { background: #45475a; }
+
+#settings-panel {
+  position: fixed; top: 54px; right: 16px;
+  background: rgba(24,24,37,0.97);
+  border: 1px solid #45475a;
+  border-radius: 8px; padding: 14px 16px;
+  z-index: 10; width: 230px;
+  display: flex; flex-direction: column; gap: 13px;
+}
+#settings-panel.hidden { display: none; }
+
+.srow { display: flex; flex-direction: column; gap: 5px; }
+.srow label {
+  font-size: 11px; color: #6c7086;
+  display: flex; justify-content: space-between;
+}
+.srow label span { color: #cdd6f4; min-width: 36px; text-align: right; }
+.srow input[type=range] {
+  width: 100%; accent-color: #89b4fa; cursor: pointer;
+  height: 4px; background: #313244; border-radius: 2px;
+}
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div id="intro">
+    <h1>SampleVec — 3D Sample Explorer</h1>
+    <p>
+      A static snapshot of a tool I built for semantic search over my local audio
+      sample library. Each star is one of 35,493 audio samples, positioned in 3D by
+      <strong>UMAP</strong> from 512-dimensional <strong>CLAP</strong> audio embeddings
+      and colored by <strong>HDBSCAN</strong> cluster — so sonically similar sounds end
+      up near each other.
+    </p>
+    <p>
+      Audio preview and text search work in the local app but not in this web snapshot.
+      Here you can fly through the cloud and explore the structure.
+      <a href="https://github.com/splidsboel/samplevec" target="_blank" rel="noopener">View the project on GitHub →</a>
+    </p>
+  </div>
+  <div class="spinner" id="spinner"></div>
+  <div id="overlay-msg">Loading layout…</div>
+  <div id="overlay-sub"></div>
+  <button class="ui-btn" id="enter-btn" disabled>Loading…</button>
+</div>
+
+<a id="back" href="/projects">← Projects</a>
+
+<div id="tooltip"></div>
+<div id="hud">
+  Click canvas to capture mouse · WASD = move · Space / Shift = up / down · Scroll = speed · Esc = release mouse
+</div>
+<div id="speed-indicator"></div>
+
+<div id="settings-toggle" title="Settings">⚙</div>
+<div id="settings-panel" class="hidden">
+  <div class="srow">
+    <label>World scale <span id="val-scale">24</span></label>
+    <input type="range" id="sld-scale" min="1" max="100" step="1" value="24" />
+  </div>
+  <div class="srow">
+    <label>Cluster density <span id="val-density">4.0</span>×</label>
+    <input type="range" id="sld-density" min="0.05" max="20" step="0.05" value="4" />
+  </div>
+  <div class="srow">
+    <label>Point size <span id="val-pts">0.4</span>×</label>
+    <input type="range" id="sld-pts" min="0.1" max="5" step="0.1" value="0.4" />
+  </div>
+  <div class="srow">
+    <label>Move speed <span id="val-spd">1.5</span>×</label>
+    <input type="range" id="sld-spd" min="0.1" max="8" step="0.1" value="1.5" />
+  </div>
+  <div class="srow">
+    <label>Fog <span id="val-fog">1.0</span>×</label>
+    <input type="range" id="sld-fog" min="0" max="5" step="0.1" value="1" />
+  </div>
+</div>
+
+<script type="importmap" is:inline>
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.min.js"
+  }
+}
+</script>
+
+<script type="module" is:inline>
+import * as THREE from 'three';
+
+// ── Star shaders ──────────────────────────────────────────────────────────────
+const STAR_VERT = `
+attribute vec3 color;
+uniform float uSize;
+uniform float uScale;
+uniform float uNearDist;
+uniform float uFarDist;
+varying vec3 vColor;
+varying float vDist;
+void main() {
+  vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * mvPos;
+  float dist = -mvPos.z;
+  gl_PointSize = uSize * (uScale / max(dist, 0.001));
+  vColor = color;
+  vDist = dist;
+}`;
+
+const STAR_FRAG = `
+uniform float uNearDist;
+uniform float uFarDist;
+varying vec3 vColor;
+varying float vDist;
+const float MIN_BRIGHT = 0.25;
+
+float spike(vec2 uv, vec2 axis) {
+  float along  = dot(uv, axis);
+  float perp   = dot(uv, vec2(-axis.y, axis.x));
+  float falloff = exp(-perp * perp * 200.0);
+  float reach   = 1.0 / (1.0 + along * along * 40.0 + pow(abs(along), 0.5) * 4.0);
+  return max(0.0, falloff * reach * step(0.0, along));
+}
+
+void main() {
+  vec2 uv = gl_PointCoord - 0.5;
+  float r = length(uv);
+  if (r > 0.5) discard;
+  float core = smoothstep(0.5, 0.0, r);
+  core = core * core;
+  float spk = spike(uv, vec2( 1.0, 0.0))
+            + spike(uv, vec2(-1.0, 0.0))
+            + spike(uv, vec2( 0.0, 1.0))
+            + spike(uv, vec2( 0.0,-1.0));
+  float shape = clamp(core + clamp(spk, 0.0, 1.0) * 0.8, 0.0, 1.0);
+  float t = 1.0 - smoothstep(uNearDist, uFarDist, vDist);
+  float bright = MIN_BRIGHT + (1.0 - MIN_BRIGHT) * t * t;
+  gl_FragColor = vec4(vColor * shape * bright, shape * bright);
+}`;
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const overlay      = document.getElementById('overlay');
+const overlayMsg   = document.getElementById('overlay-msg');
+const overlaySub   = document.getElementById('overlay-sub');
+const spinnerEl    = document.getElementById('spinner');
+const enterBtn     = document.getElementById('enter-btn');
+const tooltip      = document.getElementById('tooltip');
+const speedEl      = document.getElementById('speed-indicator');
+
+// ── Three.js setup ────────────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x11111b);
+scene.fog = new THREE.FogExp2(0x11111b, 0.01);
+
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 5000);
+camera.rotation.order = 'YXZ';
+
+const renderer = new THREE.WebGLRenderer({ antialias: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  updateStarUniforms();
+});
+
+// ── Scene data ────────────────────────────────────────────────────────────────
+let points     = [];        // [{filename, x, y, z, cluster}]
+let rawPos              = null; // Float32Array — unscaled UMAP coords
+let clusterCentroidsFlat = null; // Float32Array — per-point cluster centroid in raw space
+let posFlat    = null;      // Float32Array — final world coords
+let pointCloud = null;
+let baseColors = null;      // Float32Array — original cluster colors (immutable reference)
+let baseMaxDist = 1;        // cloud radius in raw UMAP space
+
+// ── Scale / param state ───────────────────────────────────────────────────────
+let worldScale   = 24;
+let densityMult  = 4.0;
+let ptsMult      = 0.4;
+let spdMult      = 1.5;
+let fogMult      = 1;
+let baseMoveSpd  = 1;
+let basePtSize   = 0.1;
+let baseFogDens  = 0.01;
+
+// ── FPS controls ──────────────────────────────────────────────────────────────
+let pointerLocked = false;
+const keys = {};
+let moveSpeed = 1.0;
+
+// ── Camera fly animation ──────────────────────────────────────────────────────
+let flyAnim = null;
+
+// ── Hover ─────────────────────────────────────────────────────────────────────
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-9, -9);
+let hoveredIdx = -1;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function clusterColor(cluster) {
+  if (cluster < 0) return new THREE.Color(0.22, 0.22, 0.28);
+  const h = (cluster * 0.618033988749895) % 1.0;
+  return new THREE.Color().setHSL(h, 0.75, 0.62);
+}
+
+function easeInOut(t) {
+  return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+}
+
+// ── Recompute world positions from raw coords + current scale + density ───────
+function recomputePositions() {
+  if (!rawPos || !clusterCentroidsFlat) return;
+  const n = rawPos.length / 3;
+  for (let i = 0; i < n; i++) {
+    const cx = clusterCentroidsFlat[i*3],     cy = clusterCentroidsFlat[i*3+1],     cz = clusterCentroidsFlat[i*3+2];
+    posFlat[i*3]   = (cx + (rawPos[i*3]   - cx) * densityMult) * worldScale;
+    posFlat[i*3+1] = (cy + (rawPos[i*3+1] - cy) * densityMult) * worldScale;
+    posFlat[i*3+2] = (cz + (rawPos[i*3+2] - cz) * densityMult) * worldScale;
+  }
+  if (pointCloud) {
+    pointCloud.geometry.attributes.position.array.set(posFlat);
+    pointCloud.geometry.attributes.position.needsUpdate = true;
+    pointCloud.geometry.computeBoundingSphere();
+    pointCloud.geometry.computeBoundingBox();
+  }
+}
+
+// ── Apply world scale ─────────────────────────────────────────────────────────
+function applyWorldScale(newScale) {
+  const prev = worldScale;
+  worldScale  = newScale;
+
+  recomputePositions();
+  if (pointCloud) {
+    if (prev > 0 && prev !== worldScale) camera.position.multiplyScalar(worldScale / prev);
+  }
+
+  const md    = baseMaxDist * worldScale;
+  baseMoveSpd = md * 0.002;
+  moveSpeed   = baseMoveSpd * spdMult;
+  basePtSize  = md * 0.012;
+  if (pointCloud) updateStarUniforms();
+  baseFogDens = 1.2 / md;
+  scene.fog.density = baseFogDens * fogMult;
+  raycaster.params.Points = { threshold: md * 0.015 };
+  camera.near = Math.max(0.01, md * 0.0005);
+  camera.far  = md * 12;
+  camera.updateProjectionMatrix();
+}
+
+// ── Update star shader uniforms ───────────────────────────────────────────────
+function updateStarUniforms() {
+  if (!pointCloud) return;
+  const u  = pointCloud.material.uniforms;
+  const md = baseMaxDist * worldScale;
+  u.uSize.value     = basePtSize * ptsMult;
+  u.uScale.value    = 0.5 * renderer.domElement.height * camera.projectionMatrix.elements[5];
+  u.uNearDist.value = md * 0.08;
+  u.uFarDist.value  = md * 1.2;
+}
+
+// ── Build Three.js scene ──────────────────────────────────────────────────────
+function buildScene(data) {
+  points    = data.points;
+  const n   = points.length;
+  rawPos    = new Float32Array(n * 3);
+  posFlat   = new Float32Array(n * 3);
+
+  const col = new Float32Array(n * 3);
+
+  let cx = 0, cy = 0, cz = 0;
+  const clusterSums = new Map();
+  for (let i = 0; i < n; i++) {
+    const p = points[i];
+    rawPos[i*3] = p.x; rawPos[i*3+1] = p.y; rawPos[i*3+2] = p.z;
+    cx += p.x; cy += p.y; cz += p.z;
+    const c = clusterColor(p.cluster);
+    col[i*3] = c.r; col[i*3+1] = c.g; col[i*3+2] = c.b;
+    if (p.cluster >= 0) {
+      if (!clusterSums.has(p.cluster)) clusterSums.set(p.cluster, {x:0,y:0,z:0,count:0});
+      const s = clusterSums.get(p.cluster);
+      s.x += p.x; s.y += p.y; s.z += p.z; s.count++;
+    }
+  }
+  cx /= n; cy /= n; cz /= n;
+
+  const clusterCentroids = new Map();
+  for (const [id, s] of clusterSums)
+    clusterCentroids.set(id, {x: s.x/s.count, y: s.y/s.count, z: s.z/s.count});
+
+  clusterCentroidsFlat = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const cl = points[i].cluster;
+    const cent = cl >= 0 ? clusterCentroids.get(cl) : {x: rawPos[i*3], y: rawPos[i*3+1], z: rawPos[i*3+2]};
+    clusterCentroidsFlat[i*3] = cent.x; clusterCentroidsFlat[i*3+1] = cent.y; clusterCentroidsFlat[i*3+2] = cent.z;
+  }
+
+  baseMaxDist = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = rawPos[i*3]-cx, dy = rawPos[i*3+1]-cy, dz = rawPos[i*3+2]-cz;
+    const d = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    if (d > baseMaxDist) baseMaxDist = d;
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  geo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
+  baseColors = col.slice();
+
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uSize:     { value: basePtSize * ptsMult },
+      uScale:    { value: 1.0 },
+      uNearDist: { value: 10.0 },
+      uFarDist:  { value: 200.0 },
+    },
+    vertexShader:   STAR_VERT,
+    fragmentShader: STAR_FRAG,
+    transparent:    true,
+    depthWrite:     false,
+    blending:       THREE.AdditiveBlending,
+  });
+
+  pointCloud = new THREE.Points(geo, mat);
+  scene.add(pointCloud);
+
+  applyWorldScale(worldScale);
+
+  camera.position.set(
+    cx * worldScale,
+    cy * worldScale,
+    cz * worldScale + baseMaxDist * worldScale * 1.3,
+  );
+}
+
+// ── Pointer lock ──────────────────────────────────────────────────────────────
+renderer.domElement.addEventListener('click', () => {
+  if (pointerLocked) return;
+  if (hoveredIdx < 0) renderer.domElement.requestPointerLock();
+});
+
+document.addEventListener('pointerlockchange', () => {
+  pointerLocked = document.pointerLockElement === renderer.domElement;
+  if (!pointerLocked) mouse.set(-9, -9);
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (pointerLocked) {
+    camera.rotation.y -= e.movementX * 0.0022;
+    camera.rotation.x -= e.movementY * 0.0022;
+    camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+  } else {
+    mouse.x =  (e.clientX / innerWidth)  * 2 - 1;
+    mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+  if (e.code === 'Escape' && pointerLocked) document.exitPointerLock();
+  if (pointerLocked && (e.code === 'Space' || e.code.startsWith('Arrow'))) e.preventDefault();
+});
+
+document.addEventListener('keyup', (e) => { delete keys[e.code]; });
+
+renderer.domElement.addEventListener('wheel', (e) => {
+  moveSpeed = Math.max(0.005, Math.min(0.6, moveSpeed * (e.deltaY > 0 ? 1.25 : 0.8)));
+  speedEl.textContent = 'speed: ' + moveSpeed.toFixed(3);
+}, { passive: true });
+
+// ── WASD movement ─────────────────────────────────────────────────────────────
+function updateMovement() {
+  const active = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'] ||
+                 keys['Space'] || keys['ShiftLeft'] || keys['ShiftRight'] ||
+                 keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight'];
+  if (!active) return;
+
+  const sy = Math.sin(camera.rotation.y);
+  const cy = Math.cos(camera.rotation.y);
+  let dx = 0, dy = 0, dz = 0;
+
+  if (keys['KeyW'] || keys['ArrowUp'])    { dx -= sy; dz -= cy; }
+  if (keys['KeyS'] || keys['ArrowDown'])  { dx += sy; dz += cy; }
+  if (keys['KeyA'] || keys['ArrowLeft'])  { dx -= cy; dz += sy; }
+  if (keys['KeyD'] || keys['ArrowRight']) { dx += cy; dz -= sy; }
+  if (keys['Space'])                       dy += 1;
+  if (keys['ShiftLeft'] || keys['ShiftRight']) dy -= 1;
+
+  const len = Math.sqrt(dx*dx + dy*dy + dz*dz) || 1;
+  camera.position.x += (dx / len) * moveSpeed;
+  camera.position.y += (dy / len) * moveSpeed;
+  camera.position.z += (dz / len) * moveSpeed;
+}
+
+// ── Hover ─────────────────────────────────────────────────────────────────────
+function updateHover() {
+  if (pointerLocked || !pointCloud) { hoveredIdx = -1; return; }
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObject(pointCloud);
+  if (hits.length > 0) {
+    hoveredIdx = hits[0].index;
+    tooltip.textContent = points[hoveredIdx].filename;
+    const sx = (mouse.x *  0.5 + 0.5) * innerWidth;
+    const sy = (mouse.y * -0.5 + 0.5) * innerHeight;
+    tooltip.style.left = (sx + 14) + 'px';
+    tooltip.style.top  = (sy - 10) + 'px';
+    tooltip.style.display = 'block';
+    renderer.domElement.style.cursor = 'pointer';
+  } else {
+    hoveredIdx = -1;
+    tooltip.style.display = 'none';
+    renderer.domElement.style.cursor = 'default';
+  }
+}
+
+// ── Camera fly ────────────────────────────────────────────────────────────────
+function updateFly(now) {
+  if (!flyAnim) return;
+  const t  = Math.min((now - flyAnim.start) / flyAnim.dur, 1);
+  camera.position.lerpVectors(flyAnim.from, flyAnim.to, easeInOut(t));
+  if (t >= 1) flyAnim = null;
+}
+
+// ── Settings panel ────────────────────────────────────────────────────────────
+document.getElementById('settings-toggle').addEventListener('click', () => {
+  document.getElementById('settings-panel').classList.toggle('hidden');
+});
+
+function initSlider(id, valId, onChange) {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    document.getElementById(valId).textContent = parseFloat(el.value).toFixed(1);
+    onChange(parseFloat(el.value));
+  });
+}
+
+initSlider('sld-scale', 'val-scale', v => applyWorldScale(v));
+initSlider('sld-density', 'val-density', v => { densityMult = v; recomputePositions(); });
+initSlider('sld-pts', 'val-pts', v => { ptsMult = v; if (pointCloud) updateStarUniforms(); });
+initSlider('sld-spd', 'val-spd', v => { spdMult = v; moveSpeed = baseMoveSpd * spdMult; });
+initSlider('sld-fog', 'val-fog', v => { fogMult = v; scene.fog.density = baseFogDens * fogMult; });
+
+// ── Animation loop ────────────────────────────────────────────────────────────
+let lastTime = performance.now();
+
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min((now - lastTime) / 1000, 0.1);
+  lastTime = now;
+
+  if (pointerLocked) updateMovement();
+  updateFly(now);
+  updateHover();
+
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+
+// ── Load the static snapshot, then let the user enter ─────────────────────────
+let pendingData = null;
+
+enterBtn.addEventListener('click', () => {
+  if (!pendingData) return;
+  buildScene(pendingData);
+  overlay.classList.add('hidden');
+});
+
+(async function load() {
+  try {
+    const data = await fetch('/umap-layout.json').then(r => {
+      if (!r.ok) throw new Error(r.status);
+      return r.json();
+    });
+    if (!data.points || data.points.length === 0) throw new Error('empty layout');
+    pendingData = data;
+    spinnerEl.style.display = 'none';
+    overlayMsg.textContent = data.points.length.toLocaleString() + ' samples · ' + data.clusters + ' clusters';
+    overlaySub.textContent = '';
+    enterBtn.textContent = 'Enter →';
+    enterBtn.disabled = false;
+  } catch (e) {
+    spinnerEl.style.display = 'none';
+    overlayMsg.textContent = 'Failed to load layout';
+    overlaySub.textContent = String(e);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+---
+import { NAV_LINKS, SITE } from '../config';
+
+const pathname = Astro.url.pathname;
+// Normalise trailing slash so "/about/" still matches "/about".
+const current = pathname !== '/' ? pathname.replace(/\/$/, '') : '/';
+---
+
+<nav class="flex items-center justify-between border-b border-zinc-200 py-4">
+  <a href="/" class="text-lg font-semibold tracking-tight text-zinc-900">
+    {SITE.title}
+  </a>
+  <ul class="flex gap-6 text-sm">
+    {
+      NAV_LINKS.map((link) => (
+        <li>
+          <a
+            href={link.href}
+            class:list={[
+              'transition-colors hover:text-zinc-900',
+              current === link.href ? 'font-medium text-zinc-900' : 'text-zinc-500',
+            ]}
+          >
+            {link.label}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>
