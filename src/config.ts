@@ -33,6 +33,25 @@ export const PROJECTS: Project[] = [
     href: '/umap',
     repo: 'https://github.com/splidsboel/samplevec',
     year: '2026',
-    tags: [],
+    tags: ["Semantic search", "Vector embeddings"],
   },
+  {
+    title: 'ifc-ts',
+    description:
+      'Implemented promise-based asynchronous I/O in a TypeScript library enforcing compile-time Information Flow Control.',
+    href: '',
+    repo: 'https://github.com/maxpieter/ifc-ts',
+    year: '2025',
+    tags: ["Monadic programming"],
+  },
+  {
+    title: 'Chrome Chords',
+    description:
+      'Small chrome extension I built that makes it easier to look up chords for songs playing on YouTube or Spotify',
+    href: '',
+    repo: 'https://github.com/splidsboel/chrome_chords',
+    year: '2024',
+    tags: [],
+  }
+
 ];
