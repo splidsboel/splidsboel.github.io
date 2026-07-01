@@ -29,7 +29,7 @@ export const PROJECTS: Project[] = [
   {
     title: 'SampleVec — 3D Sample Explorer',
     description:
-      'A tool for semantic search over a local audio sample library. This is an interactive 3D snapshot of 35,493 samples, positioned by UMAP from CLAP audio embeddings and colored by HDBSCAN cluster — fly through and explore the structure. Open source python package and Ableton VST',
+      'A tool for semantic search over a local audio sample library. This is an interactive 3D snapshot of 35,493 samples, positioned by UMAP from CLAP audio embeddings and colored by HDBSCAN cluster — fly through and explore the structure. Open source python package and Ableton VST.',
     href: '/umap',
     repo: 'https://github.com/splidsboel/samplevec',
     year: '2026',
@@ -47,7 +47,7 @@ export const PROJECTS: Project[] = [
   {
     title: 'Chrome Chords',
     description:
-      'Small chrome extension I built that makes it easier to look up chords for songs playing on YouTube or Spotify',
+      'Small chrome extension I built that makes it easier to look up chords for songs playing on YouTube or Spotify.',
     href: '',
     repo: 'https://github.com/splidsboel/chrome_chords',
     year: '2024',
