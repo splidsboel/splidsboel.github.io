@@ -5,8 +5,8 @@ import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
 export default defineConfig({
-  // This is a user/org GitHub Pages site, so it's served from the domain root.
-  site: 'https://splidsboel.github.io',
+  // Served from the domain root via the custom domain (CNAME in public/).
+  site: 'https://www.splidsboeleg.com',
   integrations: [react()],
   vite: {
     plugins: [tailwindcss()],
