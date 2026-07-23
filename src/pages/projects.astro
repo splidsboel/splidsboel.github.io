@@ -64,6 +64,17 @@ const isExternal = (href: string) => /^https?:\/\//.test(href);
                   Source
                 </a>
               )}
+              {project.report && (
+                <a
+                  href={project.report}
+                  {...(isExternal(project.report)
+                    ? { target: '_blank', rel: 'noopener' }
+                    : { target: '_blank' })}
+                  class="text-zinc-500 underline underline-offset-4 hover:text-zinc-900"
+                >
+                  Report
+                </a>
+              )}
             </div>
           </li>
         ))

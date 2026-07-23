@@ -20,6 +20,8 @@ export interface Project {
   href: string;
   // Optional separate "source code" link shown alongside.
   repo?: string;
+  // Optional link to a written report / paper (internal path or external URL).
+  report?: string;
   year?: string;
   tags?: string[];
 }
@@ -41,6 +43,7 @@ export const PROJECTS: Project[] = [
       'Implemented promise-based asynchronous I/O in a TypeScript library enforcing compile-time Information Flow Control.',
     href: '',
     repo: 'https://github.com/maxpieter/ifc-ts',
+    report: '/ifc-ts-report.pdf',
     year: '2025',
     tags: ["Monadic programming"],
   },
