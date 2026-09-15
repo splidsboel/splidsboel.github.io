@@ -29,6 +29,16 @@ export interface Project {
 // Add a project by adding an entry here — it shows up on /projects automatically.
 export const PROJECTS: Project[] = [
   {
+    title: 'FRAME — Filtered ANN on Real Multimedia Workloads',
+    description:
+      "My MSc thesis. A filtered approximate nearest-neighbour benchmark for known-item search that draws queries from real Video Browser Showdown user phrasings, evaluates predicates over a normalised multi-relation schema, and reports the known item's rank alongside geometric Recall@k. Results show that high geometric recall does not imply task success and that the two can vary independently. Evaluated on pgvector and ChromaDB.",
+    href: '',
+    repo: 'https://github.com/splidsboel/FRAME-kis',
+    report: '/frame-kis-thesis.pdf',
+    year: '2026',
+    tags: ['Vector search', 'Benchmarking', 'FANNS'],
+  },
+  {
     title: 'SampleVec — 3D Sample Explorer',
     description:
       'A tool for semantic search over a local audio sample library. This is an interactive 3D snapshot of 35,493 samples, positioned by UMAP from CLAP audio embeddings and colored by HDBSCAN cluster — fly through and explore the structure. Open source python package and Ableton VST.',
